@@ -63,7 +63,7 @@ python3 setup.py test
 
 ## Contributing
 
-You cannot commit to the master directly, you need to create merge request first.
+No problem :-)
 
 ## Versioning
 
