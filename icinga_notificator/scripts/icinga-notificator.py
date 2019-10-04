@@ -22,7 +22,7 @@ from icinga_notificator.functions import handling
 if __name__ == "__main__":
 
     # Default values before parsing
-    configFile = "/etc/edrive/icinga/icinga-notificator.cnf"
+    configFile = "/etc/icinga-notificator.cnf"
     sleepTimer = 60
     lastCall = dict()
     bkpIcingaUsers = None

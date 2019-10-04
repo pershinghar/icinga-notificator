@@ -1,0 +1,12 @@
+[Unit]
+Description=Icinga2 notificator service
+After=elasticsearch.service
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=nagios
+ExecStart=/usr/bin/python3 /usr/local/bin/icinga-notificator.py
+[Install]
+WantedBy=multi-user.target

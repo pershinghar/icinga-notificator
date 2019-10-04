@@ -1,0 +1,236 @@
+# Global parameters
+#
+# timeperiod - specifies period which is notificator using for checking new notifications
+# es_index - index used to look for notifications
+# 
+[global]
+timeperiod=360
+es_index=icingabeat-*
+
+# IcingaApi settings
+#
+# you need to provide credentials, so notificator can load user information
+# also you need to provide special configuration for your icinga users, check documentation.
+#
+# username - icingaapi username - need to have permission to read users
+# password - icingaapi password
+# url - icingaapi url
+# cafile - icingaapi cafile (usually located direct on icinga server in /var/lib/icinga2/certs/ca.crt), used for https request
+#
+[icingaapi]
+username=notificator
+password=yourPass
+url=https://<icingaurl>:5665/v1/objects/users
+cafile=/var/lib/icinga2/certs/ca.crt
+
+# Smseagle settings
+# 
+# if applicable only
+#
+# username - smseagle api username
+# password - smseagle api pass
+# address - smseagle modem address
+#
+[smseagle]
+username=send_sms
+password=LCe6rt3QPygKQ8j
+address=192.168.248.20
+
+# callmodem settings
+# used for localhost / remote (ssh) modem - calling
+# uses custom command (can specify script or binary)
+#
+# host - LOCAL(using local sheel to run commands), or provide hostname
+# sshkey - if hostname provided, needed to connect via ssh to remote host to use modem
+# 
+
+#[callmodem]
+#host=LOCAL
+#sshkey=/home/icingamanager/.ssh/id_rsa
+#user=icingamanager
+#cmd=<CMD>
+
+# smtp settings for sending mail
+# only hostname is implemented for now
+#
+[smtpserver]
+hostname=mailz.edrive.intra
+
+# ES queries
+# you need to edit your icinga hostname and beat name
+# this will be removed in future and we try to do it another more nice way
+
+[queries]
+agg_notify_per_host={
+      "aggs": {
+        "notifyperhost": {
+          "terms": {
+            "field": "icinga.host",
+            "size": 100,
+            "order": {
+              "_count": "desc"
+            }
+          }
+        }
+      },
+      "size": 0,
+      "version": true,
+      "_source": {
+        "excludes": []
+      },
+      "stored_fields": [
+        "*"
+      ],
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "query_string": {
+                "query": "type:icingabeat.event.notification",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "query_string": {
+                "query": "beat.hostname:>>> HERE <<< (example icinga1)",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "query_string": {
+                "query": "icinga.check_result.check_source:>>> HERE <<< (ex. fqdn of source)",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": %%GTE%%,
+                  "lte": %%LTE%%,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": [
+            {
+              "query_string": {
+                "query": "notification_handled:true",
+                "analyze_wildcard": true,
+                "default_field" : "*"
+              }
+            }
+          ],
+
+          "filter": [],
+          "should": []
+        }
+      }
+    }
+update_agg_hosts={
+      "script": {
+        "source": "ctx._source.notification_handled=true"
+      },
+      "query": {
+        "bool": {
+           "must": [
+            {
+              "query_string": {
+                "query": "type:icingabeat.event.notification",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "query_string": {
+                "query": "icinga.check_result.check_source:>>> HERE <<< (ex FQDN)",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": %%GTE%%,
+                  "lte": %%LTE%%,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": [
+            {
+              "query_string": {
+                "query": "notification_handled:true",
+                "analyze_wildcard": true,
+                "default_field" : "*"
+              }
+            }
+          ],
+
+          "filter": [],
+          "should": []
+        }
+      }
+    }
+all_unmanaged_notifies={
+      "size": 30,
+      "version": true,
+      "_source": {
+        "excludes": []
+      },
+      "stored_fields": [
+        "*"
+      ],
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "query_string": {
+                "query": "type:icingabeat.event.notification",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "query_string": {
+                "query": "beat.hostname:>>>> HERE <<< (only hostname - ex. icinga1)",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "query_string": {
+                "query": "icinga.check_result.check_source:>>>> HERE <<<< (FQDN)",
+                "analyze_wildcard": true,
+                "default_field": "*"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": %%GTE%%,
+                  "lte": %%LTE%%,
+                  "format": "epoch_millis"
+                }
+              }
+            }
+          ],
+          "must_not": [
+            {
+              "query_string": {
+                "query": "notification_handled:true",
+                "analyze_wildcard": true,
+                "default_field" : "*"
+              }
+            }
+          ],
+
+          "filter": [],
+          "should": []
+        }
+      }
+    }
