@@ -27,8 +27,15 @@ def handleNotifications(
         or ("notification_options" not in icingaUsers[user.lower()]["vars"])
         or (icingaUsers[user.lower()]["vars"]["notification_options"] is None)
     ):
-        logging.info("Cannot handle notifications, something is wrong for this user..")
-        return (1, lastCall)
+        try:
+            if icingaUsers[user.lower()]["vars"]["ignore_notificator"] is True:
+                logging.debug("Not handling notifications for user %s", user)
+            else:
+                logging.info("Cannot handle notifications, something is wrong for this user..")
+        except KeyError:
+            logging.info("Cannot handle notifications, something is wrong for this user..")
+        finally:
+            return (1, lastCall)
 
     options = icingaUsers[user.lower()]["vars"]["notification_options"]
 
