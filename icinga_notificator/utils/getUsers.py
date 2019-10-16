@@ -32,7 +32,7 @@ def getIcingaUsers(icingaApi):
         base64string = base64.b64encode(
             ("%a:%a".encode("ascii") % (icingaApi["username"], icingaApi["password"]))
         )
-        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         context.verify_mode = ssl.CERT_REQUIRED
         context.load_verify_locations(icingaApi["cafile"])
         httpsHandler = urllib.request.HTTPSHandler(context=context)
