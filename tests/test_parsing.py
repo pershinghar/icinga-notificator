@@ -55,6 +55,7 @@ def test_parseNotifications_OKArgs4(caplog):
     o = ["test.ls.intra: 2000x SERVICE"]
     assert parsing.parseNotifications(nl, "sms") == o
 
+
 def test_parseNotifications_OKArgs5(caplog):
     caplog.set_level(logging.DEBUG)
     nl = test_objects.icingaNotifGen(count=5, serviceCount=5).getObj("class")
@@ -75,6 +76,15 @@ def test_parseNotifications_OKArgs7(caplog):
     nl = test_objects.icingaNotifGen(count=5, hostCount=1, serviceCount=1).getObj("class")
     o = ['test.ls.intra0!service: test.ls.intra0 test.ls.intra0 test.ls.intra0 test.ls.intra0 test.ls.intra0 ']
     assert parsing.parseNotifications(nl, "sms") == o
+
+
+def test_parseNotifications_OKArgs8(caplog):
+    caplog.set_level(logging.DEBUG)
+    for notif_type in ["ACKNOWLEDGEMENT", "CUSTOM", "DOWNTIMESTART", "DOWNTIMEEND", "DOWNTIMEREMOVED",
+                                       "FLAPPINGSTART", "FLAPPINGEND"]:
+        nl = test_objects.icingaNotifGen(count=1, hostCount=1, serviceCount=1, notificationType=notif_type).getObj("class")
+        o = ['test.ls.intra0 - ' + notif_type + ': test.ls.intra0!service -  test text']
+        assert parsing.parseNotifications(nl, "sms") == o
 
 
 # def test_parseNotifications_OKArgs3(caplog):

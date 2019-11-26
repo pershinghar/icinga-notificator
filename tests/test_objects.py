@@ -15,7 +15,7 @@ def randomString(stringLength=10):
 
 # generate some list of notifications(obj from elastic, class)
 class icingaNotifGen:
-    def __init__(self, count=2000, serviceCount=0, hostCount=0):
+    def __init__(self, count=2000, serviceCount=0, hostCount=0, notificationType="PROBLEM"):
         self.notifyRawList = list()
         self.notifyClassList = list()
 
@@ -36,7 +36,7 @@ class icingaNotifGen:
                             },
                         },
                         "text": "test text",
-                        "notification_type": "PROBLEM",
+                        "notification_type": notificationType,
                         "users": ["testuser"],
                     }
                 }

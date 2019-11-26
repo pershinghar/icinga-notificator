@@ -69,7 +69,7 @@ def test_icingaNotification_getOutput3():
 
     assert (
         icingaNotification.icingaNotification(o, "user").getNormalOutput()
-        == "test.ls.intra - CUSTOM: HOST - test text"
+        == "test.ls.intra - CUSTOM: HOST -  test text"
     )
 
 

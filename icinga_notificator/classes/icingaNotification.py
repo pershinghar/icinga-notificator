@@ -94,8 +94,18 @@ class icingaNotification:
                     + self.optionalMessage
             )
 
-        elif self.notificationType == "CUSTOM":
-            output = self.host + " - CUSTOM: " + self.service + " -" + self.optionalMessage
+
+        elif self.notificationType in ["ACKNOWLEDGEMENT", "CUSTOM", "DOWNTIMESTART", "DOWNTIMEEND", "DOWNTIMEREMOVED",
+                                       "FLAPPINGSTART", "FLAPPINGEND"]:
+            output = (
+                    self.host
+                    + " - "
+                    + self.notificationType
+                    + ": "
+                    + self.service
+                    + " - "
+                    + self.optionalMessage
+            )
 
         else:
             output = (
