@@ -8,7 +8,7 @@ There are few channels which you can use to send notification:
 - email
 - sms (only smseagle modems now, but you can contribute:-))
 - pager (custom script called, specify in configuration)
-- slack is in development and will be released later after more testing
+- slack
 
 ## Getting Started
 
@@ -18,7 +18,7 @@ Installation and deployment process must be handled by you. I recommend using gi
 ### Prerequisites
 
 - debian server (stretch distro is tested)
-- python3
+- python3 - for packages see requirements.txt
 - pypi (python-pip3)
 - elasticsearch server (6.8.1 is tested)
 - icinga2(2.10.3 tested) with icingabeat(6.5.4 tested) sending notification data to this server 
