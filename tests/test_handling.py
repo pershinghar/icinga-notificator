@@ -6,7 +6,7 @@ import mock
 
 def test_handleNotifications_BadArgs1():
     # args: NoneType(bad)
-    assert handling.handleNotifications(None, None, None, None, None, dict(), None) == (
+    assert handling.handleNotifications(None, None, None, None, None, dict(), None, None) == (
         1,
         dict(),
     )
@@ -29,6 +29,7 @@ def test_handleNotifications_BadArgs2_mail():
             "mailserver.something",
             ["this should be dict"],
             ["this should be dict"],
+            ["this should be dict"]
         )
         != 0
     )
@@ -50,6 +51,7 @@ def test_handleNotifications_BadArgs2_sms():
             "mailserver.something",
             ["this should be dict"],
             ["this should be dict"],
+            ["this should be dict"]
         )
         != 0
     )
@@ -71,6 +73,7 @@ def test_handleNotifications_BadArgs2_call():
             "mailserver.something",
             ["this should be dict"],
             ["this should be dict"],
+            ["this should be dict"]
         )[0]
         == 1
     )
@@ -83,7 +86,7 @@ def test_handleNotifications_BadArgs3():
     us = "TestUser"
     l = test_objects.icingaNotifGen().getObj("list")
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
     assert r == -1
     assert lc == None
 
@@ -95,7 +98,7 @@ def test_handleNotifications_BadArgs4():
     us = "TestUser"
     l = test_objects.icingaNotifGen().getObj("list")
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
     assert r == 1
     assert lc == None
 
@@ -103,9 +106,10 @@ def test_handleNotifications_BadArgs4():
 @mock.patch("icinga_notificator.functions.sending.sendSMS")
 @mock.patch("icinga_notificator.functions.sending.sendMail")
 @mock.patch("icinga_notificator.functions.sending.sendCall")
+@mock.patch("icinga_notificator.functions.sending.sendSlackMessage")
 @mock.patch("icinga_notificator.functions.parsing.parseNotifications")
 def test_handleNotifications_BadArgs5(
-    mock_parseNotifications, mock_sendCall, mock_sendMail, mock_sendSMS
+    mock_parseNotifications, mock_sendSlackMessage, mock_sendCall, mock_sendMail, mock_sendSMS
 ):
     u = test_objects.icingaUserGen(10, False).generateOne()
     u["vars"]["notification_options"] = {"sms": ["ok"], "email": ["ok"], "call": ["ok"]}
@@ -117,8 +121,9 @@ def test_handleNotifications_BadArgs5(
     mock_sendSMS.return_value = 1
     mock_sendCall.return_value = (1, dict())
     mock_sendMail.return_value = 1
+    mock_sendSlackMessage.return_value = 1
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
     assert r >= 1
     assert lc == dict()
 
@@ -126,9 +131,10 @@ def test_handleNotifications_BadArgs5(
 @mock.patch("icinga_notificator.functions.sending.sendSMS")
 @mock.patch("icinga_notificator.functions.sending.sendMail")
 @mock.patch("icinga_notificator.functions.sending.sendCall")
+@mock.patch("icinga_notificator.functions.sending.sendSlackMessage")
 @mock.patch("icinga_notificator.functions.parsing.parseNotifications")
 def test_handleNotifications_OKArgs1(
-    mock_parseNotifications, mock_sendCall, mock_sendMail, mock_sendSMS
+    mock_parseNotifications, mock_sendSlackMessage, mock_sendCall, mock_sendMail, mock_sendSMS
 ):
 
     # try some correct things
@@ -141,8 +147,9 @@ def test_handleNotifications_OKArgs1(
     mock_sendSMS.return_value = 1
     mock_sendCall.return_value = (1, dict())
     mock_sendMail.return_value = 1
+    mock_sendSlackMessage.return_value = 1
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
     assert r >= 2
     assert lc == dict()
 
