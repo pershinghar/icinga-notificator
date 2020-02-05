@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import argparse
-import logging
 import time
 import signal
 from elasticsearch import Elasticsearch
-from configparser import ConfigParser, NoOptionError, NoSectionError
-import urllib.request, urllib.parse, urllib.error
+from configparser import NoOptionError
+import urllib.request
+import urllib.parse
+import urllib.error
 
 from icinga_notificator.utils import configParser
 from icinga_notificator.utils import getUsers
@@ -13,8 +14,12 @@ from icinga_notificator.utils import elastic
 from icinga_notificator.functions import signals
 from icinga_notificator.functions import aggregation
 from icinga_notificator.functions import handling
+from icinga_notificator.base import consts
 
-
+####################################
+# logging stuff
+####################################
+import logging
 ####################################
 # main
 ####################################
@@ -22,15 +27,13 @@ from icinga_notificator.functions import handling
 if __name__ == "__main__":
 
     # Default values before parsing
-    configFile = "/etc/icinga-notificator.cnf"
+    configFolder = "/etc/icinga-notificator/"
     sleepTimer = 60
     lastCall = dict()
     bkpIcingaUsers = None
     noUsers = True
-
-    loggingObj = dict()
-    loggingObj["mode"] = logging.INFO
-    loggingObj["file"] = "/var/log/icinga2/icinga-notificator.log"
+    logLevel = consts.LOGLEVELS["info"]
+    logFile = "/var/log/icinga2/icinga-notificator.log"
 
     # Parsing arguments
     parser = argparse.ArgumentParser(
@@ -45,75 +48,81 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.config:
-        configFile = args.config
+        configFolder = args.config
 
-    #
+    ###########################################
     # Config file parsing, global variables
-    #
+    ###########################################
 
     try:
-        config = configParser.ConfigParse(configFile)
+        config = configParser.ConfigParse(configFolder)
 
         timePeriod = config.parser._sections["global"]["timeperiod"]
         # WILL EDIT TO ANOTHER SECTION AFTERWARDS
         esIndex = config.parser._sections["global"]["es_index"]
-
-        # aggNotifyPerHost
-        # allUnmanagedNotifies
-        # updateNotifyPerAllHosts
-
         esQueries = config.parser._sections["queries"]
         icingaApiObj = config.parser._sections["icingaapi"]
         smsEagleObj = config.parser._sections["smseagle"]
         smtpServerHost = config.parser._sections["smtpserver"]["hostname"]
         callModemObj = config.parser._sections["callmodem"]
+        slackObj = config.parser._sections["slack"]
 
-        if "logging" in config.parser._sections:
-            loggingObj.update(config.parser._sections["logging"])
+    except (NoOptionError, KeyError):
+        logging.exception("Error in configuration - check it")
+        exit(2)
+    except OSError:
+        logging.exception("Cannot access configuration - check it")
+        exit(2)
 
-    except NoOptionError as excpt:
-        logging.exception("Error in configuration")
+    # loglevel from config
+    if "logging" in config.parser._sections:
+        try:
+            logLevel = consts.LOGLEVELS[config.parser._sections["logging"]["level"]]
+        except KeyError:
+            logLevel = consts.LOGLEVELS["info"]
         exit(2)
 
     # override config with args
     if args.debug:
-        loggingObj["mode"] = logging.DEBUG
-
+        logLevel=consts.LOGLEVELS["debug"]
     if args.cafile:
         icingaApiObj["cafile"] = args.cafile
 
-    #
-    # Init logging
-    #
+    ####################
+    # Logging INIT
+    ####################
+    logger = logging.getLogger()
+    logger.setLevel(logLevel)
 
-    logging.basicConfig(
-        filename=loggingObj["file"],
-        filemode="a",
-        format="%(asctime)s - %(levelname)s:%(lineno)d  %(message)s",
-        level=loggingObj["mode"],
-    )
+    # set where to log
+    if not args.logstdout:
+        # create a file handler
+        try:
+            handlerFILE = logging.FileHandler(logFile)
+        except OSError:
+            logger.exception("Error in loging init, perhaps problem with file")
+        handlerFILE.setLevel(logLevel)
+        # create a logging format
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s:%(lineno)d  %(message)s")
+        handlerFILE.setFormatter(formatter)
+        # add handler to logger
+        logger.addHandler(handlerFILE)
 
-    if args.logstdout:
-        # set up logging to console
-        console = logging.StreamHandler()
-        console.setLevel(loggingObj["mode"])
-        # set a format which is simpler for console use
-        formatter = logging.Formatter("%(name)-4s: %(levelname)-8s %(message)s")
-        console.setFormatter(formatter)
-        # add the handler to the root logger
-        logging.getLogger("").addHandler(console)
+    logging.getLogger("elasticsearch").setLevel(logLevel+10)
+    logging.getLogger("urllib").setLevel(logLevel+10)
 
-    logging.getLogger("elasticsearch").setLevel(logging.WARNING)
-    logging.getLogger("urllib").setLevel(logging.WARNING)
-
+    #################
     # Connect to ES
+    #################
     try:
         es = Elasticsearch()
     except Exception as e:
         logging.exception("Error creating ES object")
         exit(2)
 
-    # Active wating with sleep
+    ##############################
+    # MAIN CYCLE
+    ##############################
 
     while True:
         # User list management
@@ -189,6 +198,7 @@ if __name__ == "__main__":
                     smtpServerHost,
                     lastCall,
                     callModemObj,
+                    slackObj
                 )
                 lastCall = lc
             except Exception as e:

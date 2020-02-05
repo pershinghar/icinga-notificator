@@ -17,6 +17,7 @@ def handleNotifications(
     smtpServerHost,
     lastCall,
     callModemObj,
+    slackObj,
 ):
     """ Function which takes notifications, parses them and then send them to all of coresponding users """
     if (
@@ -31,7 +32,9 @@ def handleNotifications(
             if icingaUsers[user.lower()]["vars"]["ignore_notificator"] is True:
                 logging.debug("Not handling notifications for user %s", user)
             else:
-                logging.info("Cannot handle notifications, something is wrong for this user..")
+                logging.info(
+                    "Cannot handle notifications, something is wrong for this user.."
+                )
         except KeyError:
             logging.info("Cannot handle notifications, something is wrong for this user..")
         finally:
@@ -40,7 +43,6 @@ def handleNotifications(
     options = icingaUsers[user.lower()]["vars"]["notification_options"]
 
     # Init some things
-    send = False
     ret = -1
     # Iterrate over sending types to correctly filter this shit.
     for nType, states in options.items():
@@ -54,29 +56,33 @@ def handleNotifications(
         for notification in notificationsToHandle:
             icingaNotifObj = icn.icingaNotification(notification, user)
 
-            # manage OK notification - based on previous state
-            # if last state is defined in user options, then move ahead
             logging.debug("Notification:")
+            logging.debug("\t type: %s", icingaNotifObj.notificationType.lower())
             logging.debug("\t state: %s", icingaNotifObj.notificationState.lower())
             logging.debug(
                 "\t stateBefore: %s", icingaNotifObj.notificationStateBefore.lower()
             )
-            logging.debug("User:")
             logging.debug("\t %s : %s", nType, states)
 
-            if (
-                icingaNotifObj.notificationState.lower() == "ok"
-                and icingaNotifObj.notificationStateBefore.lower() not in states
-            ):
-                logging.debug("States does not match, skipping current run")
-                continue
-
             # filter notifications for type & user
+            # if type is problem and state match, append
             if (
-                icingaNotifObj.notificationType.lower() in states
-                or icingaNotifObj.notificationState.lower() in states
+                icingaNotifObj.notificationType.lower() == "problem"
+                and icingaNotifObj.notificationState.lower() in states
             ):
                 notificationsList.append(icingaNotifObj)
+
+            # if type is recovery, and previous state is in states, append
+            elif (
+                icingaNotifObj.notificationType.lower() == "recovery"
+                and icingaNotifObj.notificationStateBefore.lower() in states
+            ):
+                notificationsList.append(icingaNotifObj)
+
+            # if type is something else, and matches, append
+            elif icingaNotifObj.notificationType.lower() in states:
+                notificationsList.append(icingaNotifObj)
+
             else:
                 logging.debug("States not found in user, skipping current run")
                 continue
@@ -91,7 +97,13 @@ def handleNotifications(
                 message = "\n".join(notificationOutput)
                 ret += sending.sendSMS(smsModem, message, icingaUsers[user.lower()])
             if nType == "email":
-                ret += sending.sendMail(smtpServerHost, notificationOutput, icingaUsers[user.lower()])
+                ret += sending.sendMail(
+                    smtpServerHost, notificationOutput, icingaUsers[user.lower()]
+                )
+            if nType == "slack":
+                ret += sending.sendSlackMessage(
+                    slackObj, notificationOutput, icingaUsers[user.lower()]
+                )
             if nType == "call":
                 (r, lc) = sending.sendCall(
                     lastCall, icingaUsers[user.lower()], callModemObj

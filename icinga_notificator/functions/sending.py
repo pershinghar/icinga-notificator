@@ -8,17 +8,18 @@
 import logging
 import smtplib
 import socket
-import ssl
 
 import paramiko
 from collections import OrderedDict
 import subprocess
 import time
 from icinga_notificator.utils import smsLib
+from icinga_notificator.utils import slackLib
 
 #
 # MAIL
 #
+
 
 def sendMail(smtpServerHost, message, icingaUser):
     """ Function which process email sending """
@@ -44,10 +45,10 @@ def sendMail(smtpServerHost, message, icingaUser):
 
     try:
         # Send messages
-        mailServer = smtplib.SMTP(smtpServerHost, 25)
+        mailServer = smtplib.SMTP(smtpServerHost, 25, timeout=10)
         mailServer.sendmail(sender_email, receiver_email, message.as_string())
         r = 0
-    except Exception as e:
+    except Exception:
         logging.exception("Error sending mail!")
         r = 1
     return r
@@ -71,8 +72,31 @@ def sendSMS(smsModem, message, icingaUser):
     try:
         # Send SMS via SMS eagle API
         r = smsLib.sendSmsEagle(smsModem, message, pager)
-    except Exception as e:
+    except Exception:
         logging.exception("Error sending SMS!")
+
+    return r
+
+
+#
+# Slack personal
+#
+def sendSlackMessage(slackObj, message, icingaUser):
+    """ Function which uses slack to send message to user """
+
+    logging.info("Sending SLACK MESSAGE to - user %s", icingaUser["name"])
+    logging.debug("Content: %s", message)
+
+    # let's only call external function..
+    username = icingaUser["name"]
+    token = slackObj["bottoken"]
+    # default return value
+    r = 2
+
+    try:
+        r = slackLib.sendSlackMessage(token, username, message)
+    except Exception:
+        logging.exception("Error sending slack message!")
 
     return r
 
@@ -83,9 +107,7 @@ def sendSMS(smsModem, message, icingaUser):
 
 
 def sendCall(lastCall, icingaUser, callModemObj):
-    """ Function which process calling to users (pager notifications) """
-    # set default values
-    ret = 0
+    """ Function which process calling to users (pager notifications)"""
 
     if icingaUser is not None and "pager" in icingaUser:
         pager = icingaUser["pager"]
@@ -110,7 +132,7 @@ def sendCall(lastCall, icingaUser, callModemObj):
                 logging.info("Skipping call to %s - due to timer", pager)
                 return (0, lastCall)
 
-    except (KeyError, AttributeError) as e:
+    except (KeyError, AttributeError):
         logging.error("Wrong type of lastcall, should be dict", exc_info=True)
         return (1, lastCall)
 
@@ -153,7 +175,7 @@ def sendCall(lastCall, icingaUser, callModemObj):
             logging.exception("Error while trying to connect to callModemHost-ssh,")
             return (1, lastCall)
 
-        except FileNotFoundError:
+        except OSError:
             logging.exception("SSH Private key not fount, error calling")
             return (1, lastCall)
         else:

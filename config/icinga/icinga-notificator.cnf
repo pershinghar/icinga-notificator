@@ -50,6 +50,11 @@ address=192.168.248.20
 #user=icingamanager
 #cmd=<CMD>
 
+# Slack api settings
+# when you want to notify via slack, you have to create application(bot), give it correct permissions (read users, post message) and put bot token here:
+#[slack]
+#bottoken=xoxb-6738218324884-924025444325-oKs5kRLFDAUUHDVidq7QH9NVNj
+
 # smtp settings for sending mail
 # only hostname is implemented for now
 #

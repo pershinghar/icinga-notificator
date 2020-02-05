@@ -22,11 +22,15 @@ def parseNotifications(notificationsToParse, form):
         # We call, so we only ensure something is returned
         notificationOutput.append("dummy")
 
-    if form == "sms" or form == "email":
+    if form == "sms" or form == "email" or form == "slack":
         # If less than 4, send separatelly with description
-        if len(notificationsToParse) < 4 or form == "email":
+        if len(notificationsToParse) < 4 or form == "email" or form == "slack":
             for notif in notificationsToParse:
-                output = notif.getNormalOutput() if form == "sms" else notif.getNormalOutput(verbose=True)
+                output = (
+                    notif.getNormalOutput()
+                    if form == "sms"
+                    else notif.getNormalOutput(verbose=True)
+                )
                 notificationOutput.append(output)
                 logging.debug("[parsing1]: %s", output)
 
@@ -71,6 +75,43 @@ def parseNotifications(notificationsToParse, form):
 
                     notificationOutput.append(output)
                     logging.debug("[parsing4]: %s", output)
+
+    if form == "slack":
+        summary = dict()
+
+        for item in notificationOutput:
+            try:
+                summary[item.split(" - ")[1].split(":")[0]].append(item.split(" - ")[0])
+            except KeyError:
+                summary[item.split(" - ")[1].split(":")[0]] = [item.split(" - ")[0]]
+
+        body = "Icinga alert:\n"
+        logging.info(summary)
+        for k, v in summary.items():
+            if k == "CRITICAL":
+                emoji = ":red_circle:"
+            elif k == "UNKNOWN":
+                emoji = ":large_blue_circle:"
+            elif k == "WARNING":
+                emoji = ":warning"
+            elif k == "ACKNOWLEDGEMENT":
+                emoji = ":white_check_mark:"
+            elif k == "CUSTOM":
+                emoji = ":arrow_right:"
+            elif k == "OK":
+                emoji = ":green_heart:"
+            else:
+                emoji = ""
+            body += emoji + " *" + k + "*" + ": "
+
+        body += "\n"
+        for item in notificationOutput:
+            body += "`" + item.split()[0] + "` "
+            body += " ".join(item.split()[1:])
+            body += "\n"
+
+        return body
+
     if form == "email":
         # Create e-mail object
         summary = dict()
@@ -84,7 +125,7 @@ def parseNotifications(notificationsToParse, form):
             body += k + ": " + str(len(v)) + "x\n"
         body += "\n".join(notificationOutput)
 
-        body += "\n" + "="*10 + "\n"
+        body += "\n" + "=" * 10 + "\n"
 
         message = MIMEMultipart()
         message.attach(MIMEText(body, "plain"))
@@ -107,13 +148,9 @@ def parseNotifications(notificationsToParse, form):
 
         encoders.encode_base64(part)
 
-        part.add_header(
-            "Content-Disposition",
-            "attachment; filename= " + filename,
-        )
+        part.add_header("Content-Disposition", "attachment; filename= " + filename)
 
         message.attach(part)
         return message
 
     return notificationOutput
-
