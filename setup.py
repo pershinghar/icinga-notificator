@@ -10,7 +10,7 @@ with open("requirements.txt", "r") as fh:
 
 setup(
     name="icinga_notificator",
-    version="2.0.1",
+    version="2.0.11",
     packages=[
         "icinga_notificator",
         "icinga_notificator.base",
