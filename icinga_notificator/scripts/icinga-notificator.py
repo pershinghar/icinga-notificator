@@ -7,6 +7,7 @@ from configparser import NoOptionError
 import urllib.request
 import urllib.parse
 import urllib.error
+import socket
 
 from icinga_notificator.utils import configParser
 from icinga_notificator.utils import getUsers
@@ -20,6 +21,7 @@ from icinga_notificator.base import consts
 # logging stuff
 ####################################
 import logging
+
 ####################################
 # main
 ####################################
@@ -28,12 +30,14 @@ if __name__ == "__main__":
 
     # Default values before parsing
     configFolder = "/etc/icinga-notificator/"
-    sleepTimer = 60
+    sleepTimer = 180
     lastCall = dict()
     bkpIcingaUsers = None
     noUsers = True
-    logLevel = consts.LOGLEVELS["info"]
+    logLevel = consts.LOGLEVELS["warning"]
     logFile = "/var/log/icinga2/icinga-notificator.log"
+    esHost = "localhost"
+    esPort = "9200"
 
     # Parsing arguments
     parser = argparse.ArgumentParser(
@@ -66,12 +70,16 @@ if __name__ == "__main__":
         smtpServerHost = config.parser._sections["smtpserver"]["hostname"]
         callModemObj = config.parser._sections["callmodem"]
         slackObj = config.parser._sections["slack"]
+        icingaWebUrl = config.parser._sections["icingaweb"]["url"]
+        clustered = config.parser._sections["global"]["clustered"]
 
     except (NoOptionError, KeyError):
-        logging.exception("Error in configuration - check it")
+        logging.error("Error in configuration - check it")
+        logging.debug("Debug info:", exc_info=True)
         exit(2)
     except OSError:
-        logging.exception("Cannot access configuration - check it")
+        logging.error("Cannot access configuration - check it")
+        logging.debug("Debug info:", exc_info=True)
         exit(2)
 
     # loglevel from config
@@ -84,7 +92,7 @@ if __name__ == "__main__":
 
     # override config with args
     if args.debug:
-        logLevel=consts.LOGLEVELS["debug"]
+        logLevel = consts.LOGLEVELS["debug"]
     if args.cafile:
         icingaApiObj["cafile"] = args.cafile
 
@@ -108,8 +116,8 @@ if __name__ == "__main__":
         # add handler to logger
         logger.addHandler(handlerFILE)
 
-    logging.getLogger("elasticsearch").setLevel(logLevel+10)
-    logging.getLogger("urllib").setLevel(logLevel+10)
+    logging.getLogger("elasticsearch").setLevel(logLevel + 10)
+    logging.getLogger("urllib").setLevel(logLevel + 10)
 
     #################
     # Connect to ES
@@ -117,7 +125,8 @@ if __name__ == "__main__":
     try:
         es = Elasticsearch()
     except Exception as e:
-        logging.exception("Error creating ES object")
+        logging.error("Error creating ES object, exiting!")
+        logging.debug("Debug info:", exc_info=True)
         exit(2)
 
     ##############################
@@ -125,14 +134,35 @@ if __name__ == "__main__":
     ##############################
 
     while True:
+        if clustered == "true":
+            # check if I am master, then I can process notifications
+            # use elastic HA for that
+            logging.debug("checking master state (elastic HA)")
+            masterStatus = elastic.checkMasterStatus(esHost, esPort)
+            if masterStatus[socket.gethostname()] != "*":
+                logging.debug("I am not master, so no notifications.. sleeping 90")
+                time.sleep(90)
+                continue
+
         # User list management
         # Get list, if not possible, wait, tryagain..
         # Use old one if there is no possibility to get new
         for i in range(0, 3):
-            icingaUsers = getUsers.getIcingaUsers(icingaApiObj)
-            if icingaUsers == 1 or type(icingaUsers) is not dict:
+            # retry if there is exception during getting users
+            try:
+                icingaUsers = getUsers.getIcingaUsers(icingaApiObj)
+            except Exception:
+                logging.debug("Skipping getting users for %s time [exception]", i)
+                logging.debug("Debug info:", exc_info=True)
                 noUsers = True
-                time.sleep(3)
+                time.sleep(10)
+                continue
+
+            if type(icingaUsers) is not dict:
+                logging.debug("Skipping getting users for %s time [notadict]", i)
+                logging.debug("Debug info: %s", type(icingaUsers))
+                noUsers = True
+                time.sleep(10)
                 continue
             else:
                 noUsers = False
@@ -166,7 +196,7 @@ if __name__ == "__main__":
             continue
 
         # If no notifications, sleep some time, then continue
-        if int(aggResult["hits"]["total"]) == 0:
+        if int(aggResult["hits"]["total"]["value"]) == 0:
             signal.signal(signal.SIGINT, signals.signalHandler)
             signal.signal(signal.SIGTERM, signals.signalHandler)
             signal.signal(signal.SIGHUP, signals.signalHandler)
@@ -185,7 +215,7 @@ if __name__ == "__main__":
         # if cannot handle try again, then mark as handled and skip
 
         userNotifications = aggregation.aggregateBy(allNotifications, "users")
-
+        # here we could observe some problems # err possible - wait for tests and debugging
         for user in userNotifications:
             logging.debug("Handling notifications for: %s", user)
             try:
@@ -198,11 +228,13 @@ if __name__ == "__main__":
                     smtpServerHost,
                     lastCall,
                     callModemObj,
-                    slackObj
+                    slackObj,
+                    icingaWebUrl,
                 )
                 lastCall = lc
-            except Exception as e:
-                logging.exception("Handle notifications - Exception caught!")
+            except Exception:
+                logging.error("Handle notifications - Exception caught!")
+                logging.debug("Debug info:", exc_info=True)
 
         ret = elastic.markAsHandled(
             es, esIndex, esQueries["update_agg_hosts"], timePeriod, workTime

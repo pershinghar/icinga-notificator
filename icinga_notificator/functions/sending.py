@@ -49,7 +49,8 @@ def sendMail(smtpServerHost, message, icingaUser):
         mailServer.sendmail(sender_email, receiver_email, message.as_string())
         r = 0
     except Exception:
-        logging.exception("Error sending mail!")
+        logging.error("[sending.py] Error sending mail!")
+        logging.debug("Debug info:", exc_info=True)
         r = 1
     return r
 
@@ -73,7 +74,8 @@ def sendSMS(smsModem, message, icingaUser):
         # Send SMS via SMS eagle API
         r = smsLib.sendSmsEagle(smsModem, message, pager)
     except Exception:
-        logging.exception("Error sending SMS!")
+        logging.error("[sending.py] Error sending SMS!")
+        logging.debug("Debug info:", exc_info=True)
 
     return r
 
@@ -96,7 +98,8 @@ def sendSlackMessage(slackObj, message, icingaUser):
     try:
         r = slackLib.sendSlackMessage(token, username, message)
     except Exception:
-        logging.exception("Error sending slack message!")
+        logging.error("[sending.py] Error sending slack message!")
+        logging.debug("Debug info:", exc_info=True)
 
     return r
 
@@ -112,12 +115,12 @@ def sendCall(lastCall, icingaUser, callModemObj):
     if icingaUser is not None and "pager" in icingaUser:
         pager = icingaUser["pager"]
     else:
-        logging.error("User does not have number, cannot call")
+        logging.error("[sending.py] User does not have number, cannot call")
         return (1, lastCall)
 
     # some checks for corect data types
     if callModemObj is None or type(callModemObj) is not OrderedDict:
-        logging.error("Wrong settings of call modem - check config/code -")
+        logging.error("[sending.py] Wrong settings of call modem - check config/code -")
         return (1, lastCall)
 
     # Create command for calling (add number)
@@ -133,7 +136,7 @@ def sendCall(lastCall, icingaUser, callModemObj):
                 return (0, lastCall)
 
     except (KeyError, AttributeError):
-        logging.error("Wrong type of lastcall, should be dict", exc_info=True)
+        logging.error("[sending.py] Wrong type of lastcall, should be dict", exc_info=True)
         return (1, lastCall)
 
     # Update lastCall time
@@ -148,11 +151,12 @@ def sendCall(lastCall, icingaUser, callModemObj):
             scriptCall = subprocess.run([cmd], shell=True)
             if scriptCall.returncode != 0:
                 logging.error(
-                    "Error calling [LOCAL-script returned " + scriptCall.returncode + "]"
+                    "[sending.py] Error calling [LOCAL-script returned " + str(scriptCall.returncode) + "]"
                 )
                 return (1, lastCall)
-        except:
-            logging.exception("Error when trying to run callScript locally")
+        except Exception:
+            logging.error("[sending.py] Error when trying to run callScript locally")
+            logging.debug("Debug info:", exc_info=True)
             return (1, lastCall)
 
     # If there is NONE, we skip calling (We don't have modem)
@@ -172,11 +176,13 @@ def sendCall(lastCall, icingaUser, callModemObj):
             logging.debug(ssh_stderr.read())
 
         except paramiko.SSHException:
-            logging.exception("Error while trying to connect to callModemHost-ssh,")
+            logging.error(
+                "[sending.py] Error while trying to connect to callModemHost-ssh,"
+            )
             return (1, lastCall)
 
         except OSError:
-            logging.exception("SSH Private key not fount, error calling")
+            logging.error("[sending.py] SSH Private key not found, error calling")
             return (1, lastCall)
         else:
             ssh.close()

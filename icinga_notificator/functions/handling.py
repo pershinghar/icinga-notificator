@@ -18,6 +18,7 @@ def handleNotifications(
     lastCall,
     callModemObj,
     slackObj,
+    icingaWebUrl,
 ):
     """ Function which takes notifications, parses them and then send them to all of coresponding users """
     if (
@@ -76,6 +77,7 @@ def handleNotifications(
             elif (
                 icingaNotifObj.notificationType.lower() == "recovery"
                 and icingaNotifObj.notificationStateBefore.lower() in states
+                and icingaNotifObj.notificationState.lower() in states
             ):
                 notificationsList.append(icingaNotifObj)
 
@@ -90,7 +92,9 @@ def handleNotifications(
         # Parse notifications and send them
         # If there are some, parse them and send.
         if len(notificationsList) != 0:
-            notificationOutput = parsing.parseNotifications(notificationsList, nType)
+            notificationOutput = parsing.parseNotifications(
+                notificationsList, nType, icingaWebUrl
+            )
 
             # Type resolution
             if nType == "sms":

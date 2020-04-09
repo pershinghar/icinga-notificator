@@ -10,6 +10,10 @@ There are few channels which you can use to send notification:
 - pager (custom script called, specify in configuration)
 - slack
 
+New in 2.0.15:
+added experimental simple clustering feature
+- check config/icinga/icinga-notificator.cnf for description, look for clustered option
+
 ## Getting Started
 
 Installation and deployment process must be handled by you. I recommend using gitlab CI/CD for example, but there are many ways to do this.
@@ -20,8 +24,8 @@ Installation and deployment process must be handled by you. I recommend using gi
 - debian server (stretch distro is tested)
 - python3 - for packages see requirements.txt
 - pypi (python-pip3)
-- elasticsearch server (6.8.1 is tested)
-- icinga2(2.10.3 tested) with icingabeat(6.5.4 tested) sending notification data to this server 
+- elasticsearch server (7.1.0 is tested)
+- icinga2(2.11.2 tested) with icingabeat(7.5.2 tested) sending notification data to this server
 - configuration for icinga notificator in place - with values matching this server
 
 
@@ -32,7 +36,7 @@ Installation and deployment process must be handled by you. I recommend using gi
 python3 setup.py bdist_wheel
 pip3 install dist/*
 ```
-- main daemon script will be located in 
+- main daemon script will be located in
 ```
 /usr/local/bin/icinga-notificator.py
 ```
@@ -70,10 +74,9 @@ No problem :-)
 Versioning is done by some simple pattern. There are milestones created, commits under milestone are versioned as subversions (2.0.1, 2.0.2, 2.1.0, etc..); Next level subversions (should be squashed into one commit)
 ## Authors
 
-* **Jakub Stollmann** 
+* **Jakub Stollmann**
 
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-

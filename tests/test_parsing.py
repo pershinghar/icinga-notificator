@@ -4,6 +4,8 @@ import pytest
 import mock
 import logging
 
+from icinga_notificator.utils import configParser
+
 
 def test_parseNotifications_BadArgs1():
     assert parsing.parseNotifications(None, None) == 1
@@ -86,6 +88,14 @@ def test_parseNotifications_OKArgs8(caplog):
         o = ['test.ls.intra0 - ' + notif_type + ': test.ls.intra0!service -  test text']
         assert parsing.parseNotifications(nl, "sms") == o
 
+
+def test_parseNotifications_OKArgs9(caplog):
+    caplog.set_level(logging.DEBUG)
+    nl = test_objects.icingaNotifGen(count=1, serviceCount=1).getObj("class")
+    o = "*Icinga alert:*\n:green_heart: *OK:*\n\ttest.ls.intra0 - " \
+        "<test.com/dashboard#!/monitoring/service/show?host=test.ls.intra0&service=service|service>: dummy output.  " \
+        "test text\n"
+    assert parsing.parseNotifications(nl, "slack", "test.com") == o
 
 # def test_parseNotifications_OKArgs3(caplog):
 #    caplog.set_level(logging.DEBUG)

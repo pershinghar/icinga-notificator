@@ -6,7 +6,6 @@
 
 
 import logging
-import base64
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -22,16 +21,13 @@ def getIcingaUsers(icingaApi):
     users = dict()
 
     if type(icingaApi) is not OrderedDict:
-        logging.error("Wrong type of icingaApi config object, error!")
-        return 1
+        logging.error("[getUsers.py] Wrong type of icingaApi config object, error!")
+        raise (TypeError)
 
     if "cafile" not in icingaApi:
         icingaApi["cafile"] = "/var/lib/icinga2/certs/ca.crt"
 
     try:
-        base64string = base64.b64encode(
-            ("%a:%a".encode("ascii") % (icingaApi["username"], icingaApi["password"]))
-        )
         context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         context.verify_mode = ssl.CERT_REQUIRED
         context.load_verify_locations(icingaApi["cafile"])
@@ -51,18 +47,18 @@ def getIcingaUsers(icingaApi):
             tmp = response.read().decode("utf-8")
             data = json.loads(tmp)
 
-    except:
-        logging.error("Exception when trying to download users from API", exc_info=True)
-        return 2
+    except Exception as e:
+        logging.debug("[getUsers.py] Exception when trying to download users from API")
+        raise (e)
 
     try:
         for user in data["results"]:
             username = str(user["attrs"]["__name"]).lower()
             users[username] = user["attrs"]
-    except KeyError:
-        logging.exception("Downloaded users are not in form script expects.. cannot parse")
-        return 3
-    except TypeError:
-        logging.exception("Downloaded users are not in form script expects.. cannot parse")
+    except (KeyError, TypeError) as e:
+        logging.error(
+            "[getUsers.py] Downloaded users are not in form script expects.. cannot parse"
+        )
+        logging.debug("Debug info:", exc_info=True)
         return 3
     return users

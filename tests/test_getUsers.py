@@ -7,21 +7,24 @@ from collections import OrderedDict
 
 def test_getIcingaUsers_OtherArgTypeHandling():
     # we test only negative answers
-    assert getUsers.getIcingaUsers(None) == 1
+    with pytest.raises(Exception):
+        assert getUsers.getIcingaUsers(None)
 
 
 def test_getIcingaUsers_BadArgs1():
     # Try to pass some bad dict
     icingaApi = {"badKey": "apiUser", "url": "http://somebadthings"}
 
-    assert getUsers.getIcingaUsers(icingaApi) == 1
+    with pytest.raises(Exception):
+        assert getUsers.getIcingaUsers(icingaApi)
 
 
 def test_getIcingaUsers_BadArgs2():
     # Try to pass some bad dict
     icingaApi = OrderedDict()
 
-    assert getUsers.getIcingaUsers(icingaApi) == 2
+    with pytest.raises(Exception):
+        assert getUsers.getIcingaUsers(icingaApi) == 2
 
 
 @mock.patch("urllib.request")
