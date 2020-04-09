@@ -24,10 +24,12 @@ def sendSmsEagle(smsEagle, text, number):
             "message": text,
         }
     except KeyError:
-        logging.exception("Error parsing args for smsEagle modem, cannot send sms")
+        logging.error("[smsLib.py] Error parsing args for smsEagle modem, cannot send sms")
+        logging.debug("Debug info:", exc_info=True)
         return 1
     except TypeError:
-        logging.exception("Error in function args, cannot send sms")
+        logging.error("[smsLib.py] Error in function args, cannot send sms")
+        logging.debug("Debug info:", exc_info=True)
         return 1
 
     encodedArgs = urllib.parse.urlencode(args)

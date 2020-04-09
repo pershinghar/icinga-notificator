@@ -45,7 +45,6 @@ class icingaNotifGen:
                 obj["_source"]["icinga"]["service"] = "test.ls.intra" + str(i % serviceCount) + "!service"
             obj["_source"]["icinga"]["host"] = "test.ls.intra" + str(i % hostCount) if hostCount > 0 else "test.ls" \
                                                                                                           ".intra"
-            c = icingaNotification.icingaNotification(obj, "dummy")
             self.notifyRawList.append(obj)
             self.notifyClassList.append(icingaNotification.icingaNotification(obj, "dummy"))
 

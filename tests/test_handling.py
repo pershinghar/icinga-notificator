@@ -6,7 +6,7 @@ import mock
 
 def test_handleNotifications_BadArgs1():
     # args: NoneType(bad)
-    assert handling.handleNotifications(None, None, None, None, None, dict(), None, None) == (
+    assert handling.handleNotifications(None, None, None, None, None, dict(), None, None, None) == (
         1,
         dict(),
     )
@@ -29,7 +29,8 @@ def test_handleNotifications_BadArgs2_mail():
             "mailserver.something",
             ["this should be dict"],
             ["this should be dict"],
-            ["this should be dict"]
+            ["this should be dict"],
+            None
         )
         != 0
     )
@@ -51,7 +52,8 @@ def test_handleNotifications_BadArgs2_sms():
             "mailserver.something",
             ["this should be dict"],
             ["this should be dict"],
-            ["this should be dict"]
+            ["this should be dict"],
+            None
         )
         != 0
     )
@@ -73,7 +75,8 @@ def test_handleNotifications_BadArgs2_call():
             "mailserver.something",
             ["this should be dict"],
             ["this should be dict"],
-            ["this should be dict"]
+            ["this should be dict"],
+            None
         )[0]
         == 1
     )
@@ -86,7 +89,7 @@ def test_handleNotifications_BadArgs3():
     us = "TestUser"
     l = test_objects.icingaNotifGen().getObj("list")
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None, None)
     assert r == -1
     assert lc == None
 
@@ -98,7 +101,7 @@ def test_handleNotifications_BadArgs4():
     us = "TestUser"
     l = test_objects.icingaNotifGen().getObj("list")
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None, None)
     assert r == 1
     assert lc == None
 
@@ -123,7 +126,7 @@ def test_handleNotifications_BadArgs5(
     mock_sendMail.return_value = 1
     mock_sendSlackMessage.return_value = 1
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None, None)
     assert r >= 1
     assert lc == dict()
 
@@ -149,7 +152,7 @@ def test_handleNotifications_OKArgs1(
     mock_sendMail.return_value = 1
     mock_sendSlackMessage.return_value = 1
 
-    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None)
+    (r, lc) = handling.handleNotifications(l, uo, us, None, None, None, None, None, None)
     assert r >= 2
     assert lc == dict()
 

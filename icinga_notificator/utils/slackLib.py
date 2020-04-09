@@ -32,11 +32,14 @@ def sendSlackMessage(token, username, message):
         context = ssl.create_default_context()
         with urllib.request.urlopen(url, context=context) as response:
             result = json.loads(response.read().decode("utf-8"))
-    except Exception:
-        logging.exception("Something bad happened while trying to contact slack API")
-        raise Exception("Error when trying to contact API")
+    except Exception as e:
+        logging.error(
+            "[slackLib.py] Something bad happened while trying to contact slack API (get)"
+        )
+        raise (e)
 
     if result["ok"] is not True:
+        logging.error("[slackLib.py] Error in API communication(get)")
         raise Exception("Error in API communication")
 
     for member in result["members"]:
@@ -44,6 +47,9 @@ def sendSlackMessage(token, username, message):
             channel = member["id"]
 
     if channel == None:
+        logging.error(
+            "[slackLib.py] Slack User:%s not found, cannot send message to him" % (username)
+        )
         raise Exception("Slack user not found, cannot send message")
 
     # Send message to user
@@ -55,11 +61,14 @@ def sendSlackMessage(token, username, message):
         context = ssl.create_default_context()
         with urllib.request.urlopen(url, context=context) as response:
             result = json.loads(response.read().decode("utf-8"))
-    except Exception:
-        logging.exception("Something bad happened while trying to contact slack API")
-        raise Exception("Error when trying to contact API")
+    except Exception as e:
+        logging.error(
+            "[slackLib.py] Something bad happened while trying to contact slack API (post)"
+        )
+        raise (e)
 
     if result["ok"] is not True:
+        logging.error("[slackLib.py] Error in API communication (post)")
         raise Exception("Error in API communication")
 
     return 0

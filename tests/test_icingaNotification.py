@@ -59,7 +59,7 @@ def test_icingaNotification_getOutput2():
     o["_source"]["icinga"]["check_result"]["state"] = 0
     assert (
         icingaNotification.icingaNotification(o, "user").getNormalOutput()
-        == "test.ls.intra - OK: HOST test text"
+        == "test.ls.intra - OK: HOST -  test text"
     )
 
 

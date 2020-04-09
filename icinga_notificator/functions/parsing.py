@@ -2,16 +2,19 @@
 #
 # Notification parsing (manipulating)
 #
-import logging, email, smtplib, ssl, json
-import string
+import json
+import logging
+import configparser
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from string import Template
+
 from icinga_notificator.functions import aggregation
 
 
-def parseNotifications(notificationsToParse, form):
+def parseNotifications(notificationsToParse, form, icingaWebUrl=None):
     """ Function which parses notifications by type of sending channel - sms/email/etc """
     notificationOutput = list()
 
@@ -22,8 +25,8 @@ def parseNotifications(notificationsToParse, form):
         # We call, so we only ensure something is returned
         notificationOutput.append("dummy")
 
-    if form == "sms" or form == "email" or form == "slack":
-        # If less than 4, send separatelly with description
+    if form in ["sms", "email", "slack"]:
+        # If less than 4, send separately with description
         if len(notificationsToParse) < 4 or form == "email" or form == "slack":
             for notif in notificationsToParse:
                 output = (
@@ -77,39 +80,41 @@ def parseNotifications(notificationsToParse, form):
                     logging.debug("[parsing4]: %s", output)
 
     if form == "slack":
+        hostUrlTemp = Template(icingaWebUrl + '/dashboard#!/monitoring/host/show?host=$host')
+        serviceUrlTemp = Template(icingaWebUrl + '/dashboard#!/monitoring/service/show?host=$host&service=$service')
+
         summary = dict()
 
-        for item in notificationOutput:
+        # Fill summary with key=state, value=markdown link to Icinga
+        for item in notificationsToParse:
+            tmp = item.getNormalOutput().split(": ")[1].split(" ")[0]
+            host = item.getNormalOutput().split(" - ")[0]
+            link = "<" + hostUrlTemp.substitute(host=host) + "|" + host \
+                if "!" not in tmp \
+                else tmp.split("!")[0] + " - <" + \
+                     serviceUrlTemp.substitute(host=tmp.split("!")[0], service=tmp.split("!")[-1]) + "|" + \
+                     tmp.split("!")[-1]
+            link += ">: " + item.strippedMessage + ". " + item.optionalMessage
             try:
-                summary[item.split(" - ")[1].split(":")[0]].append(item.split(" - ")[0])
+                summary[item.getNormalOutput().split(" - ")[1].split(":")[0]].append(link)
             except KeyError:
-                summary[item.split(" - ")[1].split(":")[0]] = [item.split(" - ")[0]]
+                summary[item.getNormalOutput().split(" - ")[1].split(":")[0]] = [link]
 
-        body = "Icinga alert:\n"
+        body = "*Icinga alert:*\n"
         logging.info(summary)
-        for k, v in summary.items():
+        for k in summary.keys():
             if k == "CRITICAL":
-                emoji = ":red_circle:"
+                body += ":red_circle:" + " *" + k + ":*\n\t" + "\n\t".join(summary[k]) + "\n"
             elif k == "UNKNOWN":
-                emoji = ":large_blue_circle:"
+                body += ":large_blue_circle:" + " *" + k + ":*\n\t" + "\n\t".join(summary[k]) + "\n"
             elif k == "WARNING":
-                emoji = ":warning"
+                body += ":warning:" + " *" + k + ":*\n\t" + "\n\t".join(summary[k]) + "\n"
             elif k == "ACKNOWLEDGEMENT":
-                emoji = ":white_check_mark:"
+                body += ":white_check_mark:" + " *" + k + ":*\n\t" + "\n\t".join(summary[k]) + "\n"
             elif k == "CUSTOM":
-                emoji = ":arrow_right:"
+                body += ":arrow_right:" + " *" + k + ":*\n\t" + "\n\t".join(summary[k]) + "\n"
             elif k == "OK":
-                emoji = ":green_heart:"
-            else:
-                emoji = ""
-            body += emoji + " *" + k + "*" + ": "
-
-        body += "\n"
-        for item in notificationOutput:
-            body += "`" + item.split()[0] + "` "
-            body += " ".join(item.split()[1:])
-            body += "\n"
-
+                body += ":green_heart:" + " *" + k + ":*\n\t" + "\n\t".join(summary[k]) + "\n"
         return body
 
     if form == "email":

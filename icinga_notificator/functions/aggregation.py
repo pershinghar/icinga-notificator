@@ -13,10 +13,13 @@ def aggregateBy(notificationsToAgg, by):
     aggregated = dict()
 
     if type(notificationsToAgg) is not list or len(notificationsToAgg) == 0:
-        logging.error("Aggregate error, not continuing (notifies); %s", notificationsToAgg)
+        logging.error(
+            "[aggregation.py] Aggregate error, not continuing (notifies); %s",
+            notificationsToAgg,
+        )
         return 1
     if type(by) is not str or len(by) == 0:
-        logging.error("Aggregate error, not continuing (by); %s", by)
+        logging.error("[aggregation.py] Aggregate error, not continuing (by); %s", by)
         return 1
 
     for notification in notificationsToAgg:
